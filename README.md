@@ -130,6 +130,61 @@ async def main():
 asyncio.run(main())
 ```
 
+## � Project Structure
+
+```
+cutter-vad/
+├── src/real_time_vad/           # Main package source code
+│   ├── core/                    # Core VAD functionality
+│   ├── utils/                   # Utility functions
+│   └── models/                  # Silero ONNX model files
+├── examples/                    # Examples and demonstrations
+│   ├── basic_usage.py          # Simple usage example
+│   ├── advanced_usage.py       # Advanced configuration example
+│   ├── simple_demo.py          # Interactive basic demo
+│   ├── enhanced_demo.py        # Comprehensive demo
+│   └── probability_demo.py     # Probability analysis demo
+├── tools/                       # Development and debugging tools
+│   ├── inspect_models.py       # ONNX model inspector
+│   └── test_imports.py         # Import validation tool
+├── tests/                       # Unit and integration tests
+└── pyproject.toml              # Package configuration
+```
+
+## 🎯 Examples and Demos
+
+The `examples/` directory contains various demonstrations of the library:
+
+### Quick Start Examples
+```bash
+# Basic usage - minimal example
+python examples/basic_usage.py
+
+# Advanced usage - comprehensive configuration
+python examples/advanced_usage.py
+```
+
+### Interactive Demos
+```bash
+# Simple demo with audio simulation
+python examples/simple_demo.py
+
+# Enhanced demo with detailed output
+python examples/enhanced_demo.py
+
+# Probability analysis demo
+python examples/probability_demo.py
+```
+
+### Development Tools
+```bash
+# Inspect ONNX model specifications
+python tools/inspect_models.py
+
+# Validate package installation
+python tools/test_imports.py
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables
