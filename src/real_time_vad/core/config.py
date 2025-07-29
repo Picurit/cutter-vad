@@ -2,12 +2,14 @@
 Configuration classes and enums for the VAD library.
 """
 
+from __future__ import annotations
+
 import os
 import yaml
 from enum import Enum, IntEnum
 from typing import Optional, Dict, Any, Union
 from pathlib import Path
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 
 class SampleRate(IntEnum):
@@ -82,13 +84,13 @@ class VADConfig(BaseModel):
     voice_start_frame_count: int = Field(
         default=10,
         ge=1,
-        description="Frame count required to confirm voice start (10 = 0.32s @ 16kHz)"
+        description="Frame count required to confirm voice start, with defaults: buffer size 512, sample rate 16kHz; then -> (10 frames * 512 buffer size) / 16000 sample rate = 0.32 seconds = 320 ms"
     )
     
     voice_end_frame_count: int = Field(
-        default=57,
+        default=50,
         ge=1,
-        description="Frame count required to confirm voice end (57 = 1.792s @ 16kHz)"
+        description="Frame count required to confirm voice end, with defaults: buffer size 512, sample rate 16kHz; then -> (50 frames * 512 buffer size) / 16000 sample rate = 1.6 seconds = 1600 ms"
     )
     
     # Processing options
@@ -120,11 +122,11 @@ class VADConfig(BaseModel):
         description="Bit depth for output WAV data"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        validate_assignment = True
-        extra = "forbid"
+    model_config = ConfigDict(
+        use_enum_values=False,
+        validate_assignment=True,
+        extra="forbid"
+    )
     
     @field_validator('model_path')
     @classmethod
@@ -137,21 +139,10 @@ class VADConfig(BaseModel):
                 raise ValueError(f"Model path must be a directory: {v}")
         return v
     
-    @model_validator(mode='after')
-    def validate_thresholds(self) -> 'VADConfig':
-        """Validate threshold relationships."""
-        start_prob = self.vad_start_probability
-        end_prob = self.vad_end_probability
-        
-        if start_prob > end_prob + 0.3:  # Allow some reasonable difference
-            raise ValueError(
-                "VAD start probability should not be significantly higher than end probability"
-            )
-        
-        return self
+
     
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> 'VADConfig':
+    def from_dict(cls, config_dict: Dict[str, Any]) -> VADConfig:
         """Create configuration from dictionary."""
         # Convert string enums to proper enum values
         if 'sample_rate' in config_dict:
@@ -172,7 +163,7 @@ class VADConfig(BaseModel):
         return cls(**config_dict)
     
     @classmethod
-    def from_yaml(cls, yaml_path: Union[str, Path]) -> 'VADConfig':
+    def from_yaml(cls, yaml_path: Union[str, Path]) -> VADConfig:
         """Load configuration from YAML file."""
         yaml_path = Path(yaml_path)
         if not yaml_path.exists():
@@ -184,7 +175,7 @@ class VADConfig(BaseModel):
         return cls.from_dict(config_dict)
     
     @classmethod
-    def from_env(cls, prefix: str = "VAD_") -> 'VADConfig':
+    def from_env(cls, prefix: str = "VAD_") -> VADConfig:
         """Load configuration from environment variables."""
         config_dict = {}
         
@@ -224,36 +215,52 @@ class VADConfig(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.dict()
+        # Return dictionary with enum objects, not their values
+        return self.model_dump()
     
+    def _to_serializable_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary with serializable values."""
+        data = self.model_dump()
+        # Convert enums to their values for serialization
+        if isinstance(data.get('sample_rate'), SampleRate):
+            data['sample_rate'] = data['sample_rate'].value
+        if isinstance(data.get('model_version'), SileroModelVersion):
+            data['model_version'] = data['model_version'].value
+        # Convert Path to string
+        if data.get('model_path') is not None:
+            data['model_path'] = str(data['model_path'])
+        return data
+
     def to_yaml(self, yaml_path: Union[str, Path]) -> None:
         """Save configuration to YAML file."""
         yaml_path = Path(yaml_path)
         yaml_path.parent.mkdir(parents=True, exist_ok=True)
         
         with open(yaml_path, 'w', encoding='utf-8') as f:
-            yaml.dump(self.to_dict(), f, default_flow_style=False)
+            yaml.dump(self._to_serializable_dict(), f, default_flow_style=False)
     
     def get_model_filename(self) -> str:
         """Get the expected model filename for the current configuration."""
         if self.model_version == SileroModelVersion.V4:
             return "silero_vad.onnx"
-        else:  # V5
+        elif self.model_version == SileroModelVersion.V5:
             return "silero_vad_v5.onnx"
+        else:
+            return "silero_vad.onnx"  # default fallback
     
     def get_frame_duration_ms(self) -> float:
         """Get the duration of each VAD frame in milliseconds."""
         # Each frame processes buffer_size samples at the given sample rate
-        return (self.buffer_size / self.sample_rate.value) * 1000
+        return (self.buffer_size / self.sample_rate) * 1000 # Defaults: buffer size 512, sample rate 16kHz; then -> (512 samples / 16000 samples/sec) * 1000 = 32 ms
     
     def __str__(self) -> str:
         """String representation of the configuration."""
         return (
             f"VADConfig("
-            f"sample_rate={self.sample_rate.value}Hz, "
-            f"model={self.model_version.value}, "
-            f"start_prob={self.vad_start_probability}, "
-            f"end_prob={self.vad_end_probability}"
+            f"\tsample_rate={self.sample_rate}Hz, "
+            f"\tmodel={self.model_version.value}, "
+            f"\tstart_prob={self.vad_start_probability}, "
+            f"\tend_prob={self.vad_end_probability}"
             f")"
         )
     
