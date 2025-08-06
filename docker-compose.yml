@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  vad-websocket-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8765:8765"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    volumes:
+      # Mount model files to ensure they persist
+      - ./src/real_time_vad/models:/app/src/real_time_vad/models:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Add a reverse proxy for SSL termination
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - vad-websocket-service
+    restart: unless-stopped
+    profiles: ["with-proxy"]
+
+volumes:
+  models_data:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

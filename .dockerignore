@@ -1,0 +1,90 @@
+# Docker ignore file for VAD WebSocket Service
+# Ignore unnecessary files during Docker build
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+tests/
+test_*
+*_test.py
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Audio samples for testing
+*.wav
+*.mp3
+*.flac
+voice_segments/
+
+# Java build artifacts
+websocket_service/clients/java/target/
+websocket_service/clients/java/.mvn/
+websocket_service/clients/java/mvnw*
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore

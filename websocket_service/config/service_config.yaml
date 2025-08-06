@@ -1,0 +1,45 @@
+# WebSocket Service Configuration
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8765
+  log_level: "INFO"
+
+# VAD Default Configuration
+vad_defaults:
+  sample_rate: 16000
+  model_version: "v5"
+  vad_start_probability: 0.7
+  vad_end_probability: 0.7
+  voice_start_frame_count: 10
+  voice_end_frame_count: 50
+  enable_denoising: true
+  auto_convert_sample_rate: true
+  buffer_size: 1024
+
+# Client Connection Settings
+client_settings:
+  max_connections: 100
+  connection_timeout: 300  # seconds
+  ping_interval: 30        # seconds
+  max_message_size: 1048576  # 1MB
+
+# Audio Processing Settings
+audio:
+  supported_sample_rates: [8000, 16000, 24000, 48000]
+  max_chunk_size: 4096
+  audio_format: "float32"
+
+# Security Settings (for production)
+security:
+  enable_cors: true
+  allowed_origins: ["*"]
+  enable_rate_limiting: false
+  max_requests_per_minute: 1000
+
+# Monitoring and Metrics
+monitoring:
+  enable_metrics: true
+  metrics_interval: 60     # seconds
+  health_check_interval: 30  # seconds
