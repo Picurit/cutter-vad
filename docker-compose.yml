@@ -6,16 +6,18 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8765:8765"
+      - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
     volumes:
-      # Mount model files to ensure they persist
+      # Mount model files to ensure they persist and are accessible
       - ./src/real_time_vad/models:/app/src/real_time_vad/models:ro
+      # Also mount the entire models directory for fallback
+      - ./src:/app/src:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

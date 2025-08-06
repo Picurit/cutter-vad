@@ -73,11 +73,10 @@ tmp/
 temp/
 *.tmp
 
-# Audio samples for testing
-*.wav
-*.mp3
-*.flac
+# Audio samples for testing (but keep model files)
 voice_segments/
+# Exclude audio samples but NOT model files
+!src/real_time_vad/models/*.onnx
 
 # Java build artifacts
 websocket_service/clients/java/target/
