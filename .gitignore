@@ -176,7 +176,6 @@ Thumbs.db
 
 # Project specific
 /models/
-*.onnx
 *.wav
 *.pcm
 voice_output.wav
