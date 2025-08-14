@@ -490,14 +490,20 @@ class VADWrapper:
             if not isinstance(result, ProcessingResult):
                 raise ValueError("Invalid processing result type")
             
+            # Debug: Log processing result details
+            import logging
+            logging.debug(f"VAD Processing Result: voice_started={result.voice_started}, voice_ended={result.voice_ended}, voice_continuing={result.voice_continuing}, voice_probability={getattr(result, 'voice_probability', 'N/A')}")
+            
             # Execute callbacks based on voice activity state
             if result.voice_started:
+                logging.info(f"VAD: Voice started detected!")
                 self._execute_callback_safely(
                     self._callbacks.voice_start_callback,
                     "voice_start"
                 )
             
             if result.voice_ended and result.wav_data:
+                logging.info(f"VAD: Voice ended detected!")
                 self._execute_callback_safely(
                     self._callbacks.voice_end_callback,
                     "voice_end",
@@ -505,6 +511,7 @@ class VADWrapper:
                 )
             
             if result.voice_continuing and result.pcm_data:
+                logging.debug(f"VAD: Voice continuing detected!")
                 self._execute_callback_safely(
                     self._callbacks.voice_continue_callback,
                     "voice_continue",
