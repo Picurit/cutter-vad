@@ -1,5 +1,10 @@
 # Real-Time Voice Activity Detection (VAD) - Python Implementation
 
+> [!WARNING]
+> 🚧 This application is currently in development, ⚠️ it is not ready for production ⚠️. 🚧
+> The current imp+lementation of this application is very rudimentary. I'm working on a more professional implementation 🧗. ⚠️ Please don't use this in production ⚠️, as it probably won't fit your business needs.
+> However, this is a work in progress, and I'll be working to make it much better.
+
 A comprehensive Python implementation of real-time Voice Activity Detection using Silero models. This library provides efficient voice detection capabilities with configurable parameters and easy integration into any Python project.
 
 ## 🚀 Features
