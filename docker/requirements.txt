@@ -1,9 +1,9 @@
-# Extract dependencies from pyproject.toml for Docker build
-numpy>=1.21.0
-torch>=1.9.0
-onnxruntime>=1.10.0
-scipy>=1.7.0
-pydantic>=2.0.0
+# Core dependencies - PyTorch excluded (pre-installed in base image)
+# Optimized for fast installation and compatibility
+numpy>=1.21.0,<2.0.0
+onnxruntime>=1.10.0,<2.0.0
+scipy>=1.7.0,<2.0.0
+pydantic>=2.0.0,<3.0.0
 typing-extensions>=4.0.0
 PyYAML>=6.0.0
 fastapi>=0.100.0
