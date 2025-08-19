@@ -246,9 +246,18 @@ class ClientState:
         try:
             # Create VAD configuration
             frame_samples = int(self.config.audio.sample_rate * (self.config.audio.frame_duration_ms / 1000))
+            
+            # Get model path from environment variable if set
+            model_path = os.environ.get('VAD_MODEL_PATH')
+            if model_path:
+                logging.info(f"Client {self.client_id}: Using model path from VAD_MODEL_PATH: {model_path}")
+            else:
+                logging.info(f"Client {self.client_id}: Using default model path resolution")
+            
             vad_config = VADConfig(
                 sample_rate=SampleRate(self.config.audio.sample_rate),
                 model_version=SileroModelVersion.V5,
+                model_path=model_path,  # Use environment variable for model path
                 vad_start_probability=self.config.vad.start_probability,
                 vad_end_probability=self.config.vad.end_probability,
                 voice_start_frame_count=self.config.vad.start_frame_count,

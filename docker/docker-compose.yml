@@ -1,0 +1,91 @@
+services:
+  vad-websocket-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      # Add build args for optimization and caching
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - DOCKER_BUILDKIT=1
+      cache_from:
+        - pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
+    container_name: vad-websocket-server
+    ports:
+      - "${VAD_PORT:-8000}:8000"
+    environment:
+      # Server configuration
+      - UVICORN_HOST=0.0.0.0
+      - UVICORN_PORT=8000
+      - UVICORN_LOG_LEVEL=${LOG_LEVEL:-info}
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      
+      # VAD configuration defaults (can be overridden via WebSocket params)
+      - VAD_DEFAULT_SAMPLE_RATE=${VAD_DEFAULT_SAMPLE_RATE:-16000}
+      - VAD_DEFAULT_CHANNELS=${VAD_DEFAULT_CHANNELS:-1}
+      - VAD_DEFAULT_START_PROBABILITY=${VAD_DEFAULT_START_PROBABILITY:-0.4}
+      - VAD_DEFAULT_END_PROBABILITY=${VAD_DEFAULT_END_PROBABILITY:-0.3}
+      - VAD_DEFAULT_START_FRAME_COUNT=${VAD_DEFAULT_START_FRAME_COUNT:-6}
+      - VAD_DEFAULT_END_FRAME_COUNT=${VAD_DEFAULT_END_FRAME_COUNT:-12}
+      - VAD_MODEL_PATH=/app/src/real_time_vad/models
+      
+      # Performance tuning
+      - TORCH_NUM_THREADS=${TORCH_NUM_THREADS:-2}
+      - OMP_NUM_THREADS=${OMP_NUM_THREADS:-2}
+      - MKL_NUM_THREADS=${MKL_NUM_THREADS:-2}
+    
+    volumes:
+      # Mount logs directory for log persistence (optional)
+      - ./logs:/app/logs
+    
+    networks:
+      - vad-network
+    
+    restart: unless-stopped
+    
+    # Reduced resource limits for faster startup
+    deploy:
+      resources:
+        limits:
+          cpus: '3.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1024M
+    
+    # Optimized health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 4
+      start_period: 20s
+
+  # Optional: Add a reverse proxy for production
+  nginx:
+    image: nginx:alpine
+    container_name: vad-nginx
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - vad-websocket-server
+    networks:
+      - vad-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  vad-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  vad-logs:
+    driver: local
