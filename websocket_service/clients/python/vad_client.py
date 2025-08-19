@@ -58,6 +58,8 @@ class VADClient:
             "end_probability": 0.3,
             "start_frame_count": 6,
             "end_frame_count": 12,
+            "start_ratio": 0.8,    # voice_start_ratio - explicitly set
+            "end_ratio": 0.95,     # voice_end_ratio - explicitly set
             "timeout": 30.0
         }
     
@@ -154,8 +156,8 @@ class VADClient:
             raise
         
         finally:
-            # Wait a bit for final events
-            await asyncio.sleep(1.0)
+            # Wait longer for final events to ensure all segments are captured
+            await asyncio.sleep(3.0)
         
         # Get results
         processing_time = time.time() - start_time
@@ -336,6 +338,20 @@ Examples:
     )
     
     parser.add_argument(
+        "--start-ratio",
+        type=float,
+        default=0.8,
+        help="VAD start ratio threshold (default: 0.8)"
+    )
+    
+    parser.add_argument(
+        "--end-ratio",
+        type=float,
+        default=0.95,
+        help="VAD end ratio threshold (default: 0.95)"
+    )
+    
+    parser.add_argument(
         "--timeout",
         type=float,
         default=30.0,
@@ -376,6 +392,8 @@ Examples:
         "end_probability": args.end_prob,
         "start_frame_count": args.start_frames,
         "end_frame_count": args.end_frames,
+        "start_ratio": args.start_ratio,   # voice_start_ratio - explicitly set
+        "end_ratio": args.end_ratio,       # voice_end_ratio - explicitly set
         "timeout": args.timeout
     }
     

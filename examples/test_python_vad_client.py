@@ -97,6 +97,8 @@ async def test_python_client():
         "end_probability": 0.3,
         "start_frame_count": 6,
         "end_frame_count": 12,
+        "start_ratio": 0.8,  # voice_start_ratio - explicitly set
+        "end_ratio": 0.95,   # voice_end_ratio - explicitly set 
         "timeout": 30.0  # Required: tests must use timeout > 0
     }
     

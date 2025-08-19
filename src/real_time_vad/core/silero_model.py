@@ -616,6 +616,17 @@ class VADProcessor(BaseModel):
         description="Recent voice probabilities"
     )
     
+    # Frame tracking for ratio-based detection
+    recent_start_frames: deque = Field(
+        default_factory=lambda: deque(maxlen=20),
+        description="Recent frames for voice start ratio calculation"
+    )
+    
+    recent_end_frames: deque = Field(
+        default_factory=lambda: deque(maxlen=100),
+        description="Recent frames for voice end ratio calculation"
+    )
+    
     # Audio buffer management
     voice_buffer: deque = Field(
         default_factory=deque,
@@ -806,7 +817,7 @@ class VADProcessor(BaseModel):
     
     def _handle_voice_start_detection(self, probability: float, audio_frame: np.ndarray) -> Dict[str, Any]:
         """
-        Handle voice start detection logic.
+        Handle voice start detection logic with ratio-based confirmation.
         
         Args:
             probability: Voice activity probability
@@ -817,16 +828,29 @@ class VADProcessor(BaseModel):
         """
         result = {}
         
-        if probability >= self.config.vad_start_probability:
+        # Record frame status for ratio calculation
+        is_above_threshold = probability >= self.config.vad_start_probability
+        self.recent_start_frames.append(is_above_threshold)
+        
+        if is_above_threshold:
             self.voice_start_frame_count += 1
             
             # Add frame to potential voice buffer
             self.voice_buffer.append(audio_frame.copy())
             
-            # Confirm voice start
-            if self.voice_start_frame_count >= self.config.voice_start_frame_count:
-                self._confirm_voice_start()
-                result['voice_started'] = True
+            # Check if we have enough frames for ratio calculation
+            if (self.voice_start_frame_count >= self.config.voice_start_frame_count and 
+                len(self.recent_start_frames) >= self.config.voice_start_frame_count):
+                
+                # Calculate ratio of frames above threshold in recent window
+                recent_window = list(self.recent_start_frames)[-self.config.voice_start_frame_count:]
+                frames_above_threshold = sum(recent_window)
+                actual_ratio = frames_above_threshold / len(recent_window)
+                
+                # Confirm voice start if ratio meets threshold
+                if actual_ratio >= self.config.voice_start_ratio:
+                    self._confirm_voice_start()
+                    result['voice_started'] = True
         else:
             # Reset if probability drops
             self._reset_voice_start_detection()
@@ -848,10 +872,11 @@ class VADProcessor(BaseModel):
         """Reset voice start detection state."""
         self.voice_start_frame_count = 0
         self.voice_buffer.clear()
+        # Don't clear recent_start_frames as we need them for continuous monitoring
     
     def _handle_ongoing_voice_activity(self, probability: float, audio_frame: np.ndarray) -> Dict[str, Any]:
         """
-        Handle ongoing voice activity processing.
+        Handle ongoing voice activity processing with ratio-based end detection.
         
         Args:
             probability: Voice activity probability
@@ -869,15 +894,28 @@ class VADProcessor(BaseModel):
         result['voice_continuing'] = True
         result['pcm_data'] = audio_frame.tobytes()
         
+        # Record frame status for end ratio calculation
+        is_below_threshold = probability < self.config.vad_end_probability
+        self.recent_end_frames.append(is_below_threshold)
+        
         # Check for voice end
-        if probability < self.config.vad_end_probability:
+        if is_below_threshold:
             self.voice_end_frame_count += 1
             
-            # Confirm voice end
-            if self.voice_end_frame_count >= self.config.voice_end_frame_count:
-                wav_data = self._finalize_voice_segment()
-                result['voice_ended'] = True
-                result['wav_data'] = wav_data
+            # Check if we have enough frames for ratio calculation
+            if (self.voice_end_frame_count >= self.config.voice_end_frame_count and 
+                len(self.recent_end_frames) >= self.config.voice_end_frame_count):
+                
+                # Calculate ratio of frames below threshold in recent window
+                recent_window = list(self.recent_end_frames)[-self.config.voice_end_frame_count:]
+                frames_below_threshold = sum(recent_window)
+                actual_ratio = frames_below_threshold / len(recent_window)
+                
+                # Confirm voice end if ratio meets threshold
+                if actual_ratio >= self.config.voice_end_ratio:
+                    wav_data = self._finalize_voice_segment()
+                    result['voice_ended'] = True
+                    result['wav_data'] = wav_data
         else:
             # Reset end count if probability rises
             self.voice_end_frame_count = 0
@@ -926,6 +964,8 @@ class VADProcessor(BaseModel):
         self.voice_probabilities.clear()
         self.voice_buffer.clear()
         self.current_voice_data = None
+        self.recent_start_frames.clear()
+        self.recent_end_frames.clear()
     
     def get_statistics(self) -> ProcessingStatistics:
         """
