@@ -9,7 +9,7 @@ Usage:
     uvicorn websocket_service.server.vad_websocket_server:app --host 0.0.0.0 --port 8000
 
 Connection URL example:
-    ws://localhost:8000/vad?mode=pcm&sample_rate=16000&channels=1&frame_duration_ms=30&start_probability=0.4&end_probability=0.3&start_frame_count=6&end_frame_count=12&timeout=2.0
+    ws://localhost:8000/vad?mode=pcm&sample_rate=16000&channels=1&frame_duration_ms=30&start_probability=0.4&end_probability=0.3&start_frame_count=6&end_frame_count=12&start_ratio=0.8&end_ratio=0.95&timeout=2.0
 """
 
 import asyncio
@@ -52,6 +52,8 @@ class VADParameters(BaseModel):
     end_probability: float = 0.3
     start_frame_count: int = 6
     end_frame_count: int = 12
+    start_ratio: float = 0.8
+    end_ratio: float = 0.95
 
 
 class ClientConfig(BaseModel):
@@ -73,6 +75,8 @@ class ConfigMessage(BaseModel):
     end_probability: Optional[float] = None
     start_frame_count: Optional[int] = None
     end_frame_count: Optional[int] = None
+    start_ratio: Optional[float] = None
+    end_ratio: Optional[float] = None
     timeout: Optional[float] = None
 
 
@@ -260,6 +264,8 @@ class ClientState:
                 model_path=model_path,  # Use environment variable for model path
                 vad_start_probability=self.config.vad.start_probability,
                 vad_end_probability=self.config.vad.end_probability,
+                voice_start_ratio=self.config.vad.start_ratio,
+                voice_end_ratio=self.config.vad.end_ratio,
                 voice_start_frame_count=self.config.vad.start_frame_count,
                 voice_end_frame_count=self.config.vad.end_frame_count,
                 enable_denoising=True,
@@ -401,8 +407,7 @@ class ClientState:
     def _on_voice_end(self, wav_data: bytes):
         """Called when voice activity ends."""
         logging.info(f"Client {self.client_id}: VAD detected VOICE_END")
-        asyncio.create_task(self._send_voice_end())
-        self.segment_index += 1
+        asyncio.create_task(self._send_voice_end_and_increment())
         
         # Reset timeout
         if self.timeout_task:
@@ -454,6 +459,11 @@ class ClientState:
             duration_ms=end_ms - start_ms
         )
         await self._send_event(event)
+    
+    async def _send_voice_end_and_increment(self):
+        """Send voice end event and increment segment index."""
+        await self._send_voice_end()
+        self.segment_index += 1
     
     async def _send_timeout(self):
         """Send timeout event."""
@@ -556,7 +566,9 @@ def create_client_config(query_params: Dict[str, Any], config_message: Optional[
             "start_probability": 0.4,
             "end_probability": 0.3,
             "start_frame_count": 6,
-            "end_frame_count": 12
+            "end_frame_count": 12,
+            "start_ratio": 0.8,
+            "end_ratio": 0.95
         },
         "timeout": 0.0
     }
@@ -567,7 +579,7 @@ def create_client_config(query_params: Dict[str, Any], config_message: Optional[
             config_data["audio"][key] = value
         elif key in ["sample_rate", "channels", "sample_width", "frame_duration_ms"]:
             config_data["audio"][key] = value
-        elif key in ["start_probability", "end_probability", "start_frame_count", "end_frame_count"]:
+        elif key in ["start_probability", "end_probability", "start_frame_count", "end_frame_count", "start_ratio", "end_ratio"]:
             config_data["vad"][key] = value
         elif key == "timeout":
             config_data["timeout"] = value
@@ -592,6 +604,10 @@ def create_client_config(query_params: Dict[str, Any], config_message: Optional[
             config_data["vad"]["start_frame_count"] = config_message.start_frame_count
         if config_message.end_frame_count is not None:
             config_data["vad"]["end_frame_count"] = config_message.end_frame_count
+        if config_message.start_ratio is not None:
+            config_data["vad"]["start_ratio"] = config_message.start_ratio
+        if config_message.end_ratio is not None:
+            config_data["vad"]["end_ratio"] = config_message.end_ratio
         if config_message.timeout is not None:
             config_data["timeout"] = config_message.timeout
     
