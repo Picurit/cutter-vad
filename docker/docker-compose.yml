@@ -29,8 +29,6 @@ services:
       - MKL_NUM_THREADS=${MKL_NUM_THREADS:-2}
     
     volumes:
-      # Mount models directory for persistence (optional)
-      - ./models:/app/src/real_time_vad/models:ro
       # Mount logs directory for log persistence (optional)
       - ./logs:/app/logs
     

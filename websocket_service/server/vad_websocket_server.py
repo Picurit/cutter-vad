@@ -249,6 +249,10 @@ class ClientState:
             
             # Get model path from environment variable if set
             model_path = os.environ.get('VAD_MODEL_PATH')
+            if model_path:
+                logging.info(f"Client {self.client_id}: Using model path from VAD_MODEL_PATH: {model_path}")
+            else:
+                logging.info(f"Client {self.client_id}: Using default model path resolution")
             
             vad_config = VADConfig(
                 sample_rate=SampleRate(self.config.audio.sample_rate),

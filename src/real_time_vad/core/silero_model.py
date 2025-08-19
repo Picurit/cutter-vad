@@ -6,6 +6,7 @@ state management, and error handling in voice activity detection.
 """
 
 import os
+import logging
 import numpy as np
 from typing import Optional, Callable, Any, Dict, Union, List
 from pathlib import Path
@@ -699,10 +700,14 @@ class VADProcessor(BaseModel):
             Path to model directory
         """
         if self.config.model_path:
-            return Path(self.config.model_path)
+            model_dir = Path(self.config.model_path)
+            logging.info(f"Using configured model path: {model_dir}")
+            return model_dir
         else:
             # Use package resources
-            return Path(__file__).parent.parent / "models"
+            model_dir = Path(__file__).parent.parent / "models"
+            logging.info(f"Using package model path: {model_dir}")
+            return model_dir
     
     def process_frame(self, audio_frame: np.ndarray) -> ProcessingResult:
         """

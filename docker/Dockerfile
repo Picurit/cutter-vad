@@ -63,10 +63,6 @@ COPY src/ ./src/
 COPY websocket_service/ ./websocket_service/
 COPY examples/ ./examples/
 
-# Ensure model files are available (explicit copy for Docker)
-RUN mkdir -p /app/src/real_time_vad/models
-COPY src/real_time_vad/models/*.onnx /app/src/real_time_vad/models/
-
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
 
