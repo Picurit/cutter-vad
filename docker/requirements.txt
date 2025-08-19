@@ -1,0 +1,15 @@
+# Extract dependencies from pyproject.toml for Docker build
+numpy>=1.21.0
+torch>=1.9.0
+onnxruntime>=1.10.0
+scipy>=1.7.0
+pydantic>=2.0.0
+typing-extensions>=4.0.0
+PyYAML>=6.0.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+websockets>=11.0.0
+av>=10.0.0
+
+# Additional dependencies for WebSocket server
+python-multipart>=0.0.5
