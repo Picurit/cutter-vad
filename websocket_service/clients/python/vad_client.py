@@ -97,9 +97,14 @@ class VADClient:
             
         except Exception as e:
             self.logger.error(f"Error processing audio: {e}")
+            # Send close message for client error
+            if self.gateway.connected:
+                await self.gateway.send_close("client_error")
             raise
         
         finally:
+            # Ensure graceful disconnect
+            await self.gateway.disconnect("processing_complete")
             # Wait a bit for final events
             await asyncio.sleep(1.0)
         
@@ -151,11 +156,19 @@ class VADClient:
             
         except KeyboardInterrupt:
             self.logger.info("Interrupted by user")
+            # Send close message for user interruption
+            if self.gateway.connected:
+                await self.gateway.send_close("user_interrupt")
         except Exception as e:
             self.logger.error(f"Error processing audio: {e}")
+            # Send close message for client error
+            if self.gateway.connected:
+                await self.gateway.send_close("client_error")
             raise
         
         finally:
+            # Ensure graceful disconnect
+            await self.gateway.disconnect("processing_complete")
             # Wait longer for final events to ensure all segments are captured
             await asyncio.sleep(3.0)
         

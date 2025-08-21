@@ -184,10 +184,28 @@ class WebSocketGateway:
             self.connected = False
             return False
     
-    async def disconnect(self):
-        """Disconnect from WebSocket server."""
-        if self.websocket:
-            await self.websocket.close()
+    async def disconnect(self, reason: str = "user_disconnect"):
+        """
+        Disconnect from WebSocket server with graceful shutdown.
+        
+        Args:
+            reason: Reason for disconnection
+        """
+        if self.websocket and self.connected:
+            # Send close message for graceful shutdown
+            try:
+                await self.send_close(reason)
+                # Wait a bit for server to acknowledge
+                await asyncio.sleep(0.5)
+            except Exception as e:
+                self.logger.warning(f"Failed to send close message: {e}")
+            
+            # Close the connection
+            try:
+                await self.websocket.close()
+            except Exception as e:
+                self.logger.warning(f"Error closing websocket: {e}")
+            
             self.websocket = None
         
         self.connected = False
@@ -246,6 +264,29 @@ class WebSocketGateway:
             
         except Exception as e:
             self.logger.error(f"Failed to send heartbeat: {e}")
+    
+    async def send_close(self, reason: str = "user_disconnect"):
+        """
+        Send close message to server for graceful shutdown.
+        
+        Args:
+            reason: Reason for closing the connection
+        """
+        if not self.connected or not self.websocket:
+            return
+        
+        close_message = {
+            "type": "CLOSE",
+            "reason": reason,
+            "timestamp_ms": int(time.time() * 1000)
+        }
+        
+        try:
+            await self.websocket.send(json.dumps(close_message))
+            self.logger.info(f"Sent close message with reason: {reason}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to send close message: {e}")
     
     async def listen_for_events(self):
         """
@@ -318,6 +359,15 @@ class WebSocketGateway:
         finally:
             elapsed = time.time() - start_time
             self.logger.info(f"Audio streaming completed: {frame_count} frames in {elapsed:.1f}s")
+            
+            # Send close message to indicate end of audio stream
+            try:
+                if duration_seconds and (time.time() - start_time) >= duration_seconds:
+                    await self.send_close("duration_limit_reached")
+                else:
+                    await self.send_close("audio_stream_ended")
+            except Exception as e:
+                self.logger.warning(f"Failed to send stream end close message: {e}")
     
     async def run_with_reconnect(self, 
                                 audio_source: "AudioSource", 

@@ -80,6 +80,13 @@ class ConfigMessage(BaseModel):
     timeout: Optional[float] = None
 
 
+class CloseMessage(BaseModel):
+    """Close message from client."""
+    type: str = "CLOSE"
+    reason: Optional[str] = None
+    timestamp_ms: Optional[int] = None
+
+
 class VADEvent(BaseModel):
     """Base VAD event."""
     event: str
@@ -717,6 +724,22 @@ async def websocket_endpoint(websocket: WebSocket):
                         elif data.get("type") == "HEARTBEAT":
                             # Heartbeat - just acknowledge
                             await client_state._send_info("Heartbeat received")
+                            
+                        elif data.get("type") == "CLOSE":
+                            # Graceful close request from client
+                            close_msg = CloseMessage(**data)
+                            
+                            # Use provided timestamp or current time
+                            timestamp_ms = close_msg.timestamp_ms or int(time.time() * 1000)
+                            reason = close_msg.reason or "client_request"
+                            
+                            logger.info(f"Client {client_id}: Received CLOSE message - reason: {reason} - timestamp: {timestamp_ms}")
+                            
+                            # Send acknowledgment
+                            await client_state._send_info(f"Close request acknowledged - reason: {reason}")
+                            
+                            # Break the loop to start cleanup
+                            break
                             
                         else:
                             await client_state._send_error(f"Unknown message type: {data.get('type')}")

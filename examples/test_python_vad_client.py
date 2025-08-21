@@ -165,8 +165,8 @@ async def test_python_client():
         except asyncio.CancelledError:
             pass
         
-        # Disconnect
-        await gateway.disconnect()
+        # Disconnect gracefully
+        await gateway.disconnect("test_complete")
         
         print("\n📊 Processing Results:")
         print("=" * 40)
@@ -226,6 +226,15 @@ async def test_python_client():
         print(f"\n❌ Error during test: {e}")
         import traceback
         traceback.print_exc()
+        
+        # Ensure graceful shutdown even on error
+        try:
+            if gateway.connected:
+                await gateway.send_close("test_error")
+            await gateway.disconnect("test_error")
+        except Exception as cleanup_error:
+            print(f"Error during cleanup: {cleanup_error}")
+        
         return False
 
 
